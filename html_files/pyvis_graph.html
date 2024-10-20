@@ -1,0 +1,416 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 625px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 625px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "self", "label": "self", "shape": "dot", "size": 96}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "improvement", "label": "improvement", "shape": "dot", "size": 92}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "awareness", "label": "awareness", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mastery", "label": "mastery", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "transformative", "label": "transformative", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "journey", "label": "journey", "shape": "dot", "size": 52}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "recognize", "label": "recognize", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "s", "label": "s", "shape": "dot", "size": 108}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "cornerstone", "label": "cornerstone", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "personal", "label": "personal", "shape": "dot", "size": 50}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "goal", "label": "goal", "shape": "dot", "size": 44}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "act", "label": "act", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "isn", "label": "isn", "shape": "dot", "size": 18}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "t", "label": "t", "shape": "dot", "size": 18}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "laden", "label": "laden", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "challenge", "label": "challenge", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "encompasse", "label": "encompasse", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mental", "label": "mental", "shape": "dot", "size": 36}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "translate", "label": "translate", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "upskille", "label": "upskille", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "profound", "label": "profound", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "introspection", "label": "introspection", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ongoing", "label": "ongoing", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "strength", "label": "strength", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "identify", "label": "identify", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "area", "label": "area", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "guide", "label": "guide", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "solely", "label": "solely", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "demand", "label": "demand", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "destination", "label": "destination", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "emotional", "label": "emotional", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "embrace", "label": "embrace", "shape": "dot", "size": 46}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "encompass", "label": "encompass", "shape": "dot", "size": 36}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "commitment", "label": "commitment", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "require", "label": "require", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "enhance", "label": "enhance", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "set", "label": "set", "shape": "dot", "size": 32}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "consistency", "label": "consistency", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dedication", "label": "dedication", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dimension", "label": "dimension", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "life", "label": "life", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "good", "label": "good", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "skill", "label": "skill", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "version", "label": "version", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "contribute", "label": "contribute", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "equipped", "label": "equipped", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mindset", "label": "mindset", "shape": "dot", "size": 34}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "positively", "label": "positively", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "impact", "label": "impact", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "room", "label": "room", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "cultivate", "label": "cultivate", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "learn", "label": "learn", "shape": "dot", "size": 46}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "adopt", "label": "adopt", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "continuous", "label": "continuous", "shape": "dot", "size": 36}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "acknowledge", "label": "acknowledge", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "testament", "label": "testament", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "overall", "label": "overall", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "weakness", "label": "weakness", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "understand", "label": "understand", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "growth", "label": "growth", "shape": "dot", "size": 70}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "begin", "label": "begin", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "new", "label": "new", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "language", "label": "language", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "potential", "label": "potential", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "overcome", "label": "overcome", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "fear", "label": "fear", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "foster", "label": "foster", "shape": "dot", "size": 34}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "thrive", "label": "thrive", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "manage", "label": "manage", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "multitude", "label": "multitude", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "experience", "label": "experience", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "stress", "label": "stress", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "nurture", "label": "nurture", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "facet", "label": "facet", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "contribution", "label": "contribution", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "range", "label": "range", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "society", "label": "society", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "development", "label": "development", "shape": "dot", "size": 32}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "professional", "label": "professional", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "motivation", "label": "motivation", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "inspire", "label": "inspire", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "uplift", "label": "uplift", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "realm", "label": "realm", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "behavior", "label": "behavior", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "path", "label": "path", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "physical", "label": "physical", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "transformation", "label": "transformation", "shape": "dot", "size": 6}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wellness", "label": "wellness", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "health", "label": "health", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "positive", "label": "positive", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "healthy", "label": "healthy", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "change", "label": "change", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "innovation", "label": "innovation", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "beauty", "label": "beauty", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "failure", "label": "failure", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "stepping", "label": "stepping", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "adapt", "label": "adapt", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "strive", "label": "strive", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "aim", "label": "aim", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "achievable", "label": "achievable", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "challenging", "label": "challenging", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pivotal", "label": "pivotal", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "advancement", "label": "advancement", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pursuit", "label": "pursuit", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "light", "label": "light", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "evolve", "label": "evolve", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "aspect", "label": "aspect", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "learning", "label": "learning", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "adaptability", "label": "adaptability", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "crucial", "label": "crucial", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "xyz", "label": "xyz", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "involve", "label": "involve", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "gmail", "label": "gmail", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "seek", "label": "seek", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "support", "label": "support", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "com", "label": "com", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "core", "label": "core", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "belief", "label": "belief", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "lay", "label": "lay", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "foundation", "label": "foundation", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "continuously", "label": "continuously", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "acquire", "label": "acquire", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "technical", "label": "technical", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "relationship", "label": "relationship", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "resilience", "label": "resilience", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "provide", "label": "provide", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "direction", "label": "direction", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "purpose", "label": "purpose", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "compel", "label": "compel", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "push", "label": "push", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "comfort", "label": "comfort", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "zone", "label": "zone", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "integral", "label": "integral", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "tool", "label": "tool", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "recalibrate", "label": "recalibrate", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "grow", "label": "grow", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "strong", "label": "strong", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "adversity", "label": "adversity", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "turn", "label": "turn", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "expertise", "label": "expertise", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "habit", "label": "habit", "shape": "dot", "size": 24}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "routine", "label": "routine", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "intelligence", "label": "intelligence", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "play", "label": "play", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "objective", "label": "objective", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "need", "label": "need", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "prioritize", "label": "prioritize", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shape", "label": "shape", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "individual", "label": "individual", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "community", "label": "community", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "world", "label": "world", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "volunteer", "label": "volunteer", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mentorship", "label": "mentorship", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "lead", "label": "lead", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "example", "label": "example", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "discipline", "label": "discipline", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "perseverance", "label": "perseverance", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "willingness", "label": "willingness", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "landscape", "label": "landscape", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "stone", "label": "stone", "shape": "dot", "size": 22}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "endpoint", "label": "endpoint", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "setback", "label": "setback", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "progress", "label": "progress", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "opportunity", "label": "opportunity", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dynamic", "label": "dynamic", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "work", "label": "work", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "environment", "label": "environment", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "daily", "label": "daily", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "role", "label": "role", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "read", "label": "read", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "exercise", "label": "exercise", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "meditate", "label": "meditate", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "practice", "label": "practice", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "gratitude", "label": "gratitude", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "seemingly", "label": "seemingly", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "small", "label": "small", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "action", "label": "action", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "compound", "label": "compound", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "time", "label": "time", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "significantly", "label": "significantly", "shape": "dot", "size": 12}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "conclusion", "label": "conclusion", "shape": "dot", "size": 12}]);
+                  edges = new vis.DataSet([{"from": "self", "to": "improvement", "width": 1}, {"from": "self", "to": "awareness", "width": 3}, {"from": "self", "to": "mastery", "width": 3}, {"from": "self", "to": "transformative", "width": 2}, {"from": "self", "to": "journey", "width": 1}, {"from": "self", "to": "recognize", "width": 2}, {"from": "self", "to": "s", "width": 1}, {"from": "self", "to": "cornerstone", "width": 2}, {"from": "self", "to": "personal", "width": 1}, {"from": "self", "to": "goal", "width": 2}, {"from": "self", "to": "act", "width": 1}, {"from": "self", "to": "self", "width": 2}, {"from": "self", "to": "isn", "width": 2}, {"from": "self", "to": "t", "width": 1}, {"from": "self", "to": "laden", "width": 2}, {"from": "self", "to": "challenge", "width": 1}, {"from": "self", "to": "encompasse", "width": 2}, {"from": "self", "to": "mental", "width": 1}, {"from": "self", "to": "translate", "width": 2}, {"from": "self", "to": "upskille", "width": 1}, {"from": "self", "to": "profound", "width": 2}, {"from": "improvement", "to": "transformative", "width": 3}, {"from": "improvement", "to": "recognize", "width": 3}, {"from": "improvement", "to": "introspection", "width": 3}, {"from": "improvement", "to": "goal", "width": 3}, {"from": "improvement", "to": "isn", "width": 3}, {"from": "improvement", "to": "laden", "width": 3}, {"from": "improvement", "to": "encompasse", "width": 3}, {"from": "improvement", "to": "translate", "width": 3}, {"from": "improvement", "to": "profound", "width": 3}, {"from": "improvement", "to": "journey", "width": 2}, {"from": "improvement", "to": "ongoing", "width": 1}, {"from": "improvement", "to": "s", "width": 2}, {"from": "improvement", "to": "strength", "width": 1}, {"from": "improvement", "to": "identify", "width": 2}, {"from": "improvement", "to": "area", "width": 1}, {"from": "improvement", "to": "act", "width": 2}, {"from": "improvement", "to": "guide", "width": 1}, {"from": "improvement", "to": "t", "width": 2}, {"from": "improvement", "to": "solely", "width": 1}, {"from": "improvement", "to": "challenge", "width": 2}, {"from": "improvement", "to": "demand", "width": 1}, {"from": "improvement", "to": "destination", "width": 1}, {"from": "improvement", "to": "mental", "width": 2}, {"from": "improvement", "to": "emotional", "width": 1}, {"from": "improvement", "to": "upskille", "width": 2}, {"from": "improvement", "to": "embrace", "width": 1}, {"from": "improvement", "to": "encompass", "width": 1}, {"from": "transformative", "to": "journey", "width": 3}, {"from": "transformative", "to": "ongoing", "width": 2}, {"from": "transformative", "to": "commitment", "width": 1}, {"from": "journey", "to": "ongoing", "width": 3}, {"from": "journey", "to": "embrace", "width": 3}, {"from": "journey", "to": "require", "width": 3}, {"from": "journey", "to": "encompass", "width": 3}, {"from": "journey", "to": "commitment", "width": 2}, {"from": "journey", "to": "enhance", "width": 1}, {"from": "journey", "to": "introspection", "width": 2}, {"from": "journey", "to": "set", "width": 1}, {"from": "journey", "to": "mastery", "width": 2}, {"from": "journey", "to": "consistency", "width": 2}, {"from": "journey", "to": "dedication", "width": 1}, {"from": "journey", "to": "dimension", "width": 2}, {"from": "journey", "to": "life", "width": 1}, {"from": "ongoing", "to": "commitment", "width": 3}, {"from": "ongoing", "to": "enhance", "width": 2}, {"from": "ongoing", "to": "s", "width": 1}, {"from": "commitment", "to": "enhance", "width": 3}, {"from": "commitment", "to": "good", "width": 3}, {"from": "commitment", "to": "s", "width": 2}, {"from": "commitment", "to": "skill", "width": 1}, {"from": "commitment", "to": "version", "width": 2}, {"from": "commitment", "to": "contribute", "width": 1}, {"from": "enhance", "to": "s", "width": 3}, {"from": "enhance", "to": "equipped", "width": 3}, {"from": "enhance", "to": "skill", "width": 2}, {"from": "enhance", "to": "mindset", "width": 1}, {"from": "enhance", "to": "positively", "width": 2}, {"from": "enhance", "to": "impact", "width": 1}, {"from": "s", "to": "skill", "width": 1}, {"from": "s", "to": "journey", "width": 2}, {"from": "s", "to": "strength", "width": 3}, {"from": "s", "to": "room", "width": 3}, {"from": "s", "to": "cultivate", "width": 3}, {"from": "s", "to": "learn", "width": 3}, {"from": "s", "to": "adopt", "width": 3}, {"from": "s", "to": "continuous", "width": 3}, {"from": "s", "to": "acknowledge", "width": 3}, {"from": "s", "to": "testament", "width": 3}, {"from": "s", "to": "mindset", "width": 1}, {"from": "s", "to": "overall", "width": 1}, {"from": "s", "to": "embrace", "width": 2}, {"from": "s", "to": "introspection", "width": 1}, {"from": "s", "to": "weakness", "width": 2}, {"from": "s", "to": "understand", "width": 1}, {"from": "s", "to": "growth", "width": 2}, {"from": "s", "to": "begin", "width": 1}, {"from": "s", "to": "new", "width": 2}, {"from": "s", "to": "language", "width": 1}, {"from": "s", "to": "require", "width": 1}, {"from": "s", "to": "potential", "width": 2}, {"from": "s", "to": "set", "width": 1}, {"from": "s", "to": "good", "width": 1}, {"from": "skill", "to": "mindset", "width": 3}, {"from": "skill", "to": "overcome", "width": 3}, {"from": "skill", "to": "overall", "width": 2}, {"from": "skill", "to": "encompass", "width": 1}, {"from": "skill", "to": "fear", "width": 2}, {"from": "skill", "to": "foster", "width": 1}, {"from": "mindset", "to": "overall", "width": 3}, {"from": "mindset", "to": "thrive", "width": 3}, {"from": "mindset", "to": "manage", "width": 3}, {"from": "mindset", "to": "encompass", "width": 2}, {"from": "mindset", "to": "multitude", "width": 1}, {"from": "mindset", "to": "learn", "width": 2}, {"from": "mindset", "to": "experience", "width": 1}, {"from": "mindset", "to": "stress", "width": 2}, {"from": "mindset", "to": "nurture", "width": 1}, {"from": "overall", "to": "encompass", "width": 3}, {"from": "overall", "to": "multitude", "width": 2}, {"from": "overall", "to": "facet", "width": 1}, {"from": "encompass", "to": "multitude", "width": 3}, {"from": "encompass", "to": "contribution", "width": 3}, {"from": "encompass", "to": "dimension", "width": 3}, {"from": "encompass", "to": "facet", "width": 2}, {"from": "encompass", "to": "range", "width": 1}, {"from": "encompass", "to": "society", "width": 2}, {"from": "encompass", "to": "enhance", "width": 1}, {"from": "encompass", "to": "life", "width": 2}, {"from": "encompass", "to": "s", "width": 1}, {"from": "multitude", "to": "facet", "width": 3}, {"from": "multitude", "to": "range", "width": 2}, {"from": "multitude", "to": "personal", "width": 1}, {"from": "facet", "to": "range", "width": 3}, {"from": "facet", "to": "personal", "width": 2}, {"from": "facet", "to": "development", "width": 1}, {"from": "range", "to": "personal", "width": 3}, {"from": "range", "to": "development", "width": 2}, {"from": "range", "to": "professional", "width": 1}, {"from": "personal", "to": "development", "width": 3}, {"from": "personal", "to": "growth", "width": 1}, {"from": "personal", "to": "professional", "width": 2}, {"from": "personal", "to": "understand", "width": 2}, {"from": "personal", "to": "motivation", "width": 1}, {"from": "personal", "to": "inspire", "width": 2}, {"from": "personal", "to": "uplift", "width": 1}, {"from": "personal", "to": "improvement", "width": 1}, {"from": "personal", "to": "realm", "width": 1}, {"from": "development", "to": "professional", "width": 3}, {"from": "development", "to": "understand", "width": 3}, {"from": "development", "to": "inspire", "width": 3}, {"from": "development", "to": "growth", "width": 2}, {"from": "development", "to": "mental", "width": 1}, {"from": "development", "to": "motivation", "width": 2}, {"from": "development", "to": "behavior", "width": 1}, {"from": "development", "to": "uplift", "width": 2}, {"from": "development", "to": "path", "width": 1}, {"from": "professional", "to": "growth", "width": 3}, {"from": "professional", "to": "realm", "width": 3}, {"from": "professional", "to": "mental", "width": 2}, {"from": "professional", "to": "physical", "width": 1}, {"from": "professional", "to": "self", "width": 2}, {"from": "professional", "to": "improvement", "width": 1}, {"from": "growth", "to": "mental", "width": 3}, {"from": "growth", "to": "begin", "width": 3}, {"from": "growth", "to": "encompass", "width": 3}, {"from": "growth", "to": "mindset", "width": 3}, {"from": "growth", "to": "self", "width": 1}, {"from": "growth", "to": "transformation", "width": 3}, {"from": "growth", "to": "physical", "width": 2}, {"from": "growth", "to": "wellness", "width": 1}, {"from": "growth", "to": "awareness", "width": 1}, {"from": "growth", "to": "contribution", "width": 2}, {"from": "growth", "to": "society", "width": 1}, {"from": "growth", "to": "thrive", "width": 2}, {"from": "growth", "to": "learn", "width": 1}, {"from": "growth", "to": "improvement", "width": 2}, {"from": "growth", "to": "encompasse", "width": 1}, {"from": "growth", "to": "realm", "width": 2}, {"from": "mental", "to": "physical", "width": 3}, {"from": "mental", "to": "emotional", "width": 3}, {"from": "mental", "to": "health", "width": 3}, {"from": "mental", "to": "wellness", "width": 2}, {"from": "mental", "to": "s", "width": 1}, {"from": "mental", "to": "cultivate", "width": 2}, {"from": "mental", "to": "positive", "width": 1}, {"from": "mental", "to": "foster", "width": 2}, {"from": "mental", "to": "healthy", "width": 1}, {"from": "physical", "to": "wellness", "width": 3}, {"from": "physical", "to": "s", "width": 2}, {"from": "physical", "to": "journey", "width": 1}, {"from": "wellness", "to": "s", "width": 3}, {"from": "wellness", "to": "journey", "width": 2}, {"from": "wellness", "to": "embrace", "width": 1}, {"from": "embrace", "to": "introspection", "width": 3}, {"from": "embrace", "to": "change", "width": 1}, {"from": "embrace", "to": "innovation", "width": 3}, {"from": "embrace", "to": "beauty", "width": 3}, {"from": "embrace", "to": "set", "width": 2}, {"from": "embrace", "to": "goal", "width": 1}, {"from": "embrace", "to": "failure", "width": 2}, {"from": "embrace", "to": "stepping", "width": 1}, {"from": "embrace", "to": "adapt", "width": 2}, {"from": "embrace", "to": "growth", "width": 2}, {"from": "embrace", "to": "transformation", "width": 1}, {"from": "introspection", "to": "set", "width": 3}, {"from": "introspection", "to": "identify", "width": 3}, {"from": "introspection", "to": "goal", "width": 2}, {"from": "introspection", "to": "strive", "width": 1}, {"from": "introspection", "to": "area", "width": 2}, {"from": "introspection", "to": "aim", "width": 1}, {"from": "set", "to": "goal", "width": 1}, {"from": "set", "to": "achievable", "width": 3}, {"from": "set", "to": "strive", "width": 2}, {"from": "set", "to": "continuous", "width": 1}, {"from": "set", "to": "challenging", "width": 2}, {"from": "set", "to": "learn", "width": 2}, {"from": "set", "to": "experience", "width": 1}, {"from": "goal", "to": "strive", "width": 3}, {"from": "goal", "to": "pivotal", "width": 3}, {"from": "goal", "to": "act", "width": 3}, {"from": "goal", "to": "learn", "width": 3}, {"from": "goal", "to": "continuous", "width": 2}, {"from": "goal", "to": "advancement", "width": 1}, {"from": "goal", "to": "pursuit", "width": 2}, {"from": "goal", "to": "guide", "width": 2}, {"from": "goal", "to": "light", "width": 1}, {"from": "goal", "to": "experience", "width": 2}, {"from": "goal", "to": "evolve", "width": 1}, {"from": "strive", "to": "continuous", "width": 3}, {"from": "strive", "to": "advancement", "width": 2}, {"from": "strive", "to": "aspect", "width": 1}, {"from": "continuous", "to": "advancement", "width": 3}, {"from": "continuous", "to": "journey", "width": 3}, {"from": "continuous", "to": "learning", "width": 3}, {"from": "continuous", "to": "aspect", "width": 2}, {"from": "continuous", "to": "life", "width": 1}, {"from": "continuous", "to": "require", "width": 2}, {"from": "continuous", "to": "consistency", "width": 1}, {"from": "continuous", "to": "adaptability", "width": 2}, {"from": "continuous", "to": "crucial", "width": 1}, {"from": "advancement", "to": "aspect", "width": 3}, {"from": "advancement", "to": "life", "width": 2}, {"from": "advancement", "to": "xyz", "width": 1}, {"from": "aspect", "to": "life", "width": 3}, {"from": "aspect", "to": "involve", "width": 3}, {"from": "aspect", "to": "xyz", "width": 2}, {"from": "aspect", "to": "gmail", "width": 1}, {"from": "aspect", "to": "seek", "width": 2}, {"from": "aspect", "to": "support", "width": 1}, {"from": "life", "to": "xyz", "width": 3}, {"from": "life", "to": "s", "width": 3}, {"from": "life", "to": "gmail", "width": 2}, {"from": "life", "to": "com", "width": 1}, {"from": "life", "to": "acknowledge", "width": 2}, {"from": "life", "to": "potential", "width": 1}, {"from": "xyz", "to": "gmail", "width": 3}, {"from": "xyz", "to": "com", "width": 2}, {"from": "xyz", "to": "core", "width": 1}, {"from": "gmail", "to": "com", "width": 3}, {"from": "gmail", "to": "core", "width": 2}, {"from": "gmail", "to": "self", "width": 1}, {"from": "com", "to": "core", "width": 3}, {"from": "com", "to": "self", "width": 2}, {"from": "com", "to": "improvement", "width": 1}, {"from": "core", "to": "self", "width": 3}, {"from": "core", "to": "improvement", "width": 2}, {"from": "core", "to": "recognize", "width": 1}, {"from": "recognize", "to": "s", "width": 3}, {"from": "recognize", "to": "strength", "width": 2}, {"from": "recognize", "to": "weakness", "width": 1}, {"from": "strength", "to": "weakness", "width": 3}, {"from": "strength", "to": "understand", "width": 2}, {"from": "weakness", "to": "understand", "width": 3}, {"from": "weakness", "to": "room", "width": 1}, {"from": "understand", "to": "motivation", "width": 3}, {"from": "understand", "to": "room", "width": 2}, {"from": "understand", "to": "growth", "width": 1}, {"from": "understand", "to": "behavior", "width": 2}, {"from": "understand", "to": "belief", "width": 1}, {"from": "room", "to": "growth", "width": 3}, {"from": "room", "to": "begin", "width": 2}, {"from": "room", "to": "self", "width": 1}, {"from": "begin", "to": "self", "width": 3}, {"from": "begin", "to": "awareness", "width": 2}, {"from": "begin", "to": "cornerstone", "width": 1}, {"from": "awareness", "to": "cornerstone", "width": 3}, {"from": "awareness", "to": "personal", "width": 2}, {"from": "awareness", "to": "development", "width": 1}, {"from": "cornerstone", "to": "personal", "width": 3}, {"from": "cornerstone", "to": "development", "width": 2}, {"from": "cornerstone", "to": "understand", "width": 1}, {"from": "motivation", "to": "behavior", "width": 3}, {"from": "motivation", "to": "belief", "width": 2}, {"from": "motivation", "to": "lay", "width": 1}, {"from": "behavior", "to": "belief", "width": 3}, {"from": "behavior", "to": "lay", "width": 2}, {"from": "behavior", "to": "foundation", "width": 1}, {"from": "belief", "to": "lay", "width": 3}, {"from": "belief", "to": "foundation", "width": 2}, {"from": "belief", "to": "improvement", "width": 1}, {"from": "lay", "to": "foundation", "width": 3}, {"from": "lay", "to": "improvement", "width": 2}, {"from": "lay", "to": "introspection", "width": 1}, {"from": "foundation", "to": "improvement", "width": 3}, {"from": "foundation", "to": "introspection", "width": 2}, {"from": "foundation", "to": "identify", "width": 1}, {"from": "identify", "to": "area", "width": 3}, {"from": "identify", "to": "aim", "width": 2}, {"from": "identify", "to": "evolve", "width": 1}, {"from": "area", "to": "aim", "width": 3}, {"from": "area", "to": "evolve", "width": 2}, {"from": "area", "to": "s", "width": 1}, {"from": "aim", "to": "evolve", "width": 3}, {"from": "aim", "to": "s", "width": 2}, {"from": "aim", "to": "cultivate", "width": 1}, {"from": "evolve", "to": "s", "width": 2}, {"from": "evolve", "to": "continuously", "width": 3}, {"from": "evolve", "to": "cultivate", "width": 2}, {"from": "evolve", "to": "new", "width": 1}, {"from": "evolve", "to": "testament", "width": 1}, {"from": "cultivate", "to": "new", "width": 3}, {"from": "cultivate", "to": "positive", "width": 3}, {"from": "cultivate", "to": "skill", "width": 2}, {"from": "cultivate", "to": "overcome", "width": 1}, {"from": "cultivate", "to": "mindset", "width": 2}, {"from": "cultivate", "to": "manage", "width": 1}, {"from": "new", "to": "skill", "width": 3}, {"from": "new", "to": "language", "width": 3}, {"from": "new", "to": "overcome", "width": 2}, {"from": "new", "to": "fear", "width": 1}, {"from": "new", "to": "acquire", "width": 2}, {"from": "new", "to": "technical", "width": 1}, {"from": "overcome", "to": "fear", "width": 3}, {"from": "overcome", "to": "foster", "width": 2}, {"from": "overcome", "to": "relationship", "width": 1}, {"from": "fear", "to": "foster", "width": 3}, {"from": "fear", "to": "relationship", "width": 2}, {"from": "fear", "to": "set", "width": 1}, {"from": "foster", "to": "relationship", "width": 2}, {"from": "foster", "to": "resilience", "width": 3}, {"from": "foster", "to": "healthy", "width": 3}, {"from": "foster", "to": "set", "width": 2}, {"from": "foster", "to": "achievable", "width": 1}, {"from": "foster", "to": "adaptability", "width": 2}, {"from": "foster", "to": "s", "width": 1}, {"from": "foster", "to": "nurture", "width": 1}, {"from": "relationship", "to": "set", "width": 3}, {"from": "relationship", "to": "nurture", "width": 3}, {"from": "relationship", "to": "achievable", "width": 2}, {"from": "relationship", "to": "challenging", "width": 1}, {"from": "relationship", "to": "personal", "width": 2}, {"from": "relationship", "to": "growth", "width": 1}, {"from": "achievable", "to": "challenging", "width": 3}, {"from": "achievable", "to": "goal", "width": 2}, {"from": "achievable", "to": "pivotal", "width": 1}, {"from": "challenging", "to": "goal", "width": 3}, {"from": "challenging", "to": "pivotal", "width": 2}, {"from": "challenging", "to": "pursuit", "width": 1}, {"from": "pivotal", "to": "pursuit", "width": 3}, {"from": "pivotal", "to": "self", "width": 2}, {"from": "pivotal", "to": "improvement", "width": 1}, {"from": "pursuit", "to": "self", "width": 3}, {"from": "pursuit", "to": "improvement", "width": 2}, {"from": "act", "to": "guide", "width": 3}, {"from": "act", "to": "light", "width": 2}, {"from": "act", "to": "provide", "width": 1}, {"from": "guide", "to": "light", "width": 3}, {"from": "guide", "to": "provide", "width": 2}, {"from": "guide", "to": "direction", "width": 1}, {"from": "light", "to": "provide", "width": 3}, {"from": "light", "to": "direction", "width": 2}, {"from": "light", "to": "purpose", "width": 1}, {"from": "provide", "to": "direction", "width": 3}, {"from": "provide", "to": "purpose", "width": 2}, {"from": "provide", "to": "compel", "width": 1}, {"from": "direction", "to": "purpose", "width": 3}, {"from": "direction", "to": "compel", "width": 2}, {"from": "direction", "to": "push", "width": 1}, {"from": "purpose", "to": "compel", "width": 3}, {"from": "purpose", "to": "push", "width": 2}, {"from": "purpose", "to": "comfort", "width": 1}, {"from": "compel", "to": "push", "width": 3}, {"from": "compel", "to": "comfort", "width": 2}, {"from": "compel", "to": "zone", "width": 1}, {"from": "push", "to": "comfort", "width": 3}, {"from": "push", "to": "zone", "width": 2}, {"from": "push", "to": "foster", "width": 1}, {"from": "comfort", "to": "zone", "width": 3}, {"from": "comfort", "to": "foster", "width": 2}, {"from": "comfort", "to": "resilience", "width": 1}, {"from": "zone", "to": "foster", "width": 3}, {"from": "zone", "to": "resilience", "width": 2}, {"from": "zone", "to": "adaptability", "width": 1}, {"from": "resilience", "to": "adaptability", "width": 3}, {"from": "resilience", "to": "integral", "width": 3}, {"from": "resilience", "to": "s", "width": 2}, {"from": "resilience", "to": "learn", "width": 1}, {"from": "resilience", "to": "aspect", "width": 2}, {"from": "resilience", "to": "involve", "width": 1}, {"from": "adaptability", "to": "s", "width": 3}, {"from": "adaptability", "to": "crucial", "width": 3}, {"from": "adaptability", "to": "learn", "width": 2}, {"from": "adaptability", "to": "new", "width": 1}, {"from": "adaptability", "to": "tool", "width": 2}, {"from": "adaptability", "to": "thrive", "width": 1}, {"from": "learn", "to": "new", "width": 3}, {"from": "learn", "to": "recalibrate", "width": 3}, {"from": "learn", "to": "experience", "width": 3}, {"from": "learn", "to": "language", "width": 2}, {"from": "learn", "to": "acquire", "width": 1}, {"from": "learn", "to": "grow", "width": 2}, {"from": "learn", "to": "strong", "width": 1}, {"from": "learn", "to": "adversity", "width": 2}, {"from": "learn", "to": "turn", "width": 1}, {"from": "learn", "to": "evolve", "width": 2}, {"from": "learn", "to": "continuously", "width": 1}, {"from": "language", "to": "acquire", "width": 3}, {"from": "language", "to": "technical", "width": 2}, {"from": "language", "to": "expertise", "width": 1}, {"from": "acquire", "to": "technical", "width": 3}, {"from": "acquire", "to": "expertise", "width": 2}, {"from": "acquire", "to": "adopt", "width": 1}, {"from": "technical", "to": "expertise", "width": 3}, {"from": "technical", "to": "adopt", "width": 2}, {"from": "technical", "to": "healthy", "width": 1}, {"from": "expertise", "to": "adopt", "width": 3}, {"from": "expertise", "to": "healthy", "width": 2}, {"from": "expertise", "to": "habit", "width": 1}, {"from": "adopt", "to": "healthy", "width": 3}, {"from": "adopt", "to": "growth", "width": 3}, {"from": "adopt", "to": "habit", "width": 2}, {"from": "adopt", "to": "seek", "width": 1}, {"from": "adopt", "to": "mindset", "width": 2}, {"from": "adopt", "to": "thrive", "width": 1}, {"from": "healthy", "to": "habit", "width": 3}, {"from": "healthy", "to": "relationship", "width": 3}, {"from": "healthy", "to": "seek", "width": 2}, {"from": "healthy", "to": "emotional", "width": 1}, {"from": "healthy", "to": "nurture", "width": 2}, {"from": "healthy", "to": "personal", "width": 1}, {"from": "habit", "to": "seek", "width": 3}, {"from": "habit", "to": "routine", "width": 3}, {"from": "habit", "to": "emotional", "width": 2}, {"from": "habit", "to": "intelligence", "width": 1}, {"from": "habit", "to": "play", "width": 2}, {"from": "habit", "to": "crucial", "width": 1}, {"from": "seek", "to": "emotional", "width": 3}, {"from": "seek", "to": "support", "width": 3}, {"from": "seek", "to": "intelligence", "width": 2}, {"from": "seek", "to": "objective", "width": 1}, {"from": "seek", "to": "need", "width": 2}, {"from": "seek", "to": "prioritize", "width": 1}, {"from": "emotional", "to": "intelligence", "width": 3}, {"from": "emotional", "to": "cultivate", "width": 3}, {"from": "emotional", "to": "objective", "width": 2}, {"from": "emotional", "to": "shape", "width": 1}, {"from": "emotional", "to": "positive", "width": 2}, {"from": "emotional", "to": "mindset", "width": 1}, {"from": "intelligence", "to": "objective", "width": 3}, {"from": "intelligence", "to": "shape", "width": 2}, {"from": "intelligence", "to": "journey", "width": 1}, {"from": "objective", "to": "shape", "width": 3}, {"from": "objective", "to": "journey", "width": 2}, {"from": "objective", "to": "self", "width": 1}, {"from": "shape", "to": "journey", "width": 3}, {"from": "shape", "to": "self", "width": 2}, {"from": "shape", "to": "mastery", "width": 1}, {"from": "mastery", "to": "improvement", "width": 2}, {"from": "mastery", "to": "isn", "width": 1}, {"from": "isn", "to": "t", "width": 3}, {"from": "isn", "to": "solely", "width": 2}, {"from": "isn", "to": "individual", "width": 1}, {"from": "isn", "to": "destination", "width": 2}, {"from": "isn", "to": "s", "width": 1}, {"from": "t", "to": "solely", "width": 3}, {"from": "t", "to": "destination", "width": 3}, {"from": "t", "to": "individual", "width": 2}, {"from": "t", "to": "growth", "width": 1}, {"from": "t", "to": "s", "width": 2}, {"from": "t", "to": "continuous", "width": 1}, {"from": "solely", "to": "individual", "width": 3}, {"from": "solely", "to": "growth", "width": 2}, {"from": "solely", "to": "encompass", "width": 1}, {"from": "individual", "to": "growth", "width": 3}, {"from": "individual", "to": "encompass", "width": 2}, {"from": "individual", "to": "contribution", "width": 1}, {"from": "contribution", "to": "society", "width": 3}, {"from": "contribution", "to": "enhance", "width": 2}, {"from": "contribution", "to": "equipped", "width": 1}, {"from": "society", "to": "enhance", "width": 3}, {"from": "society", "to": "equipped", "width": 2}, {"from": "society", "to": "positively", "width": 1}, {"from": "equipped", "to": "positively", "width": 3}, {"from": "equipped", "to": "impact", "width": 2}, {"from": "equipped", "to": "community", "width": 1}, {"from": "positively", "to": "impact", "width": 3}, {"from": "positively", "to": "world", "width": 3}, {"from": "positively", "to": "community", "width": 2}, {"from": "positively", "to": "volunteer", "width": 1}, {"from": "positively", "to": "embrace", "width": 2}, {"from": "positively", "to": "beauty", "width": 1}, {"from": "impact", "to": "community", "width": 3}, {"from": "impact", "to": "volunteer", "width": 2}, {"from": "impact", "to": "mentorship", "width": 1}, {"from": "community", "to": "volunteer", "width": 3}, {"from": "community", "to": "mentorship", "width": 2}, {"from": "community", "to": "lead", "width": 1}, {"from": "volunteer", "to": "mentorship", "width": 3}, {"from": "volunteer", "to": "lead", "width": 2}, {"from": "volunteer", "to": "example", "width": 1}, {"from": "mentorship", "to": "lead", "width": 3}, {"from": "mentorship", "to": "example", "width": 2}, {"from": "mentorship", "to": "personal", "width": 1}, {"from": "lead", "to": "example", "width": 3}, {"from": "lead", "to": "personal", "width": 2}, {"from": "lead", "to": "development", "width": 1}, {"from": "example", "to": "personal", "width": 3}, {"from": "example", "to": "development", "width": 2}, {"from": "example", "to": "inspire", "width": 1}, {"from": "inspire", "to": "uplift", "width": 3}, {"from": "inspire", "to": "path", "width": 2}, {"from": "inspire", "to": "self", "width": 1}, {"from": "uplift", "to": "path", "width": 3}, {"from": "uplift", "to": "self", "width": 2}, {"from": "uplift", "to": "improvement", "width": 1}, {"from": "path", "to": "self", "width": 3}, {"from": "path", "to": "improvement", "width": 2}, {"from": "path", "to": "laden", "width": 1}, {"from": "laden", "to": "challenge", "width": 3}, {"from": "laden", "to": "demand", "width": 2}, {"from": "laden", "to": "discipline", "width": 1}, {"from": "challenge", "to": "demand", "width": 3}, {"from": "challenge", "to": "discipline", "width": 2}, {"from": "challenge", "to": "perseverance", "width": 1}, {"from": "demand", "to": "discipline", "width": 3}, {"from": "demand", "to": "perseverance", "width": 2}, {"from": "demand", "to": "willingness", "width": 1}, {"from": "discipline", "to": "perseverance", "width": 3}, {"from": "discipline", "to": "willingness", "width": 2}, {"from": "discipline", "to": "embrace", "width": 1}, {"from": "perseverance", "to": "willingness", "width": 3}, {"from": "perseverance", "to": "embrace", "width": 2}, {"from": "perseverance", "to": "change", "width": 1}, {"from": "willingness", "to": "embrace", "width": 3}, {"from": "willingness", "to": "change", "width": 2}, {"from": "willingness", "to": "failure", "width": 1}, {"from": "change", "to": "failure", "width": 3}, {"from": "change", "to": "landscape", "width": 3}, {"from": "change", "to": "stepping", "width": 2}, {"from": "change", "to": "stone", "width": 1}, {"from": "change", "to": "continuous", "width": 2}, {"from": "change", "to": "learning", "width": 1}, {"from": "failure", "to": "stepping", "width": 3}, {"from": "failure", "to": "stone", "width": 2}, {"from": "failure", "to": "endpoint", "width": 1}, {"from": "stepping", "to": "stone", "width": 3}, {"from": "stepping", "to": "endpoint", "width": 2}, {"from": "stepping", "to": "setback", "width": 1}, {"from": "stepping", "to": "progress", "width": 2}, {"from": "stepping", "to": "self", "width": 1}, {"from": "stone", "to": "endpoint", "width": 3}, {"from": "stone", "to": "progress", "width": 3}, {"from": "stone", "to": "setback", "width": 2}, {"from": "stone", "to": "opportunity", "width": 1}, {"from": "stone", "to": "self", "width": 2}, {"from": "stone", "to": "improvement", "width": 1}, {"from": "endpoint", "to": "setback", "width": 3}, {"from": "endpoint", "to": "opportunity", "width": 2}, {"from": "endpoint", "to": "learn", "width": 1}, {"from": "setback", "to": "opportunity", "width": 3}, {"from": "setback", "to": "learn", "width": 2}, {"from": "setback", "to": "recalibrate", "width": 1}, {"from": "opportunity", "to": "learn", "width": 3}, {"from": "opportunity", "to": "recalibrate", "width": 2}, {"from": "opportunity", "to": "grow", "width": 1}, {"from": "recalibrate", "to": "grow", "width": 3}, {"from": "recalibrate", "to": "strong", "width": 2}, {"from": "recalibrate", "to": "s", "width": 1}, {"from": "grow", "to": "strong", "width": 3}, {"from": "grow", "to": "s", "width": 2}, {"from": "grow", "to": "adopt", "width": 1}, {"from": "strong", "to": "s", "width": 3}, {"from": "strong", "to": "adopt", "width": 2}, {"from": "strong", "to": "growth", "width": 1}, {"from": "thrive", "to": "learn", "width": 3}, {"from": "thrive", "to": "dynamic", "width": 3}, {"from": "thrive", "to": "experience", "width": 2}, {"from": "thrive", "to": "adversity", "width": 1}, {"from": "thrive", "to": "work", "width": 2}, {"from": "thrive", "to": "environment", "width": 1}, {"from": "experience", "to": "adversity", "width": 3}, {"from": "experience", "to": "evolve", "width": 3}, {"from": "experience", "to": "turn", "width": 2}, {"from": "experience", "to": "stepping", "width": 1}, {"from": "experience", "to": "continuously", "width": 2}, {"from": "experience", "to": "s", "width": 1}, {"from": "adversity", "to": "turn", "width": 3}, {"from": "adversity", "to": "stepping", "width": 2}, {"from": "adversity", "to": "stone", "width": 1}, {"from": "turn", "to": "stepping", "width": 3}, {"from": "turn", "to": "stone", "width": 2}, {"from": "turn", "to": "progress", "width": 1}, {"from": "progress", "to": "self", "width": 3}, {"from": "progress", "to": "improvement", "width": 2}, {"from": "progress", "to": "isn", "width": 1}, {"from": "destination", "to": "s", "width": 3}, {"from": "destination", "to": "continuous", "width": 2}, {"from": "destination", "to": "journey", "width": 1}, {"from": "require", "to": "consistency", "width": 3}, {"from": "require", "to": "dedication", "width": 2}, {"from": "require", "to": "daily", "width": 1}, {"from": "consistency", "to": "dedication", "width": 3}, {"from": "consistency", "to": "daily", "width": 2}, {"from": "consistency", "to": "habit", "width": 1}, {"from": "dedication", "to": "daily", "width": 3}, {"from": "dedication", "to": "habit", "width": 2}, {"from": "dedication", "to": "routine", "width": 1}, {"from": "daily", "to": "habit", "width": 3}, {"from": "daily", "to": "routine", "width": 2}, {"from": "daily", "to": "play", "width": 1}, {"from": "routine", "to": "play", "width": 3}, {"from": "routine", "to": "crucial", "width": 2}, {"from": "routine", "to": "role", "width": 1}, {"from": "play", "to": "crucial", "width": 3}, {"from": "play", "to": "role", "width": 2}, {"from": "play", "to": "read", "width": 1}, {"from": "crucial", "to": "role", "width": 3}, {"from": "crucial", "to": "tool", "width": 3}, {"from": "crucial", "to": "read", "width": 2}, {"from": "crucial", "to": "exercise", "width": 1}, {"from": "crucial", "to": "thrive", "width": 2}, {"from": "crucial", "to": "dynamic", "width": 1}, {"from": "role", "to": "read", "width": 3}, {"from": "role", "to": "exercise", "width": 2}, {"from": "role", "to": "meditate", "width": 1}, {"from": "read", "to": "exercise", "width": 3}, {"from": "read", "to": "meditate", "width": 2}, {"from": "read", "to": "practice", "width": 1}, {"from": "exercise", "to": "meditate", "width": 3}, {"from": "exercise", "to": "practice", "width": 2}, {"from": "exercise", "to": "gratitude", "width": 1}, {"from": "meditate", "to": "practice", "width": 3}, {"from": "meditate", "to": "gratitude", "width": 2}, {"from": "meditate", "to": "seemingly", "width": 1}, {"from": "practice", "to": "gratitude", "width": 3}, {"from": "practice", "to": "seemingly", "width": 2}, {"from": "practice", "to": "small", "width": 1}, {"from": "gratitude", "to": "seemingly", "width": 3}, {"from": "gratitude", "to": "small", "width": 2}, {"from": "gratitude", "to": "action", "width": 1}, {"from": "seemingly", "to": "small", "width": 3}, {"from": "seemingly", "to": "action", "width": 2}, {"from": "seemingly", "to": "compound", "width": 1}, {"from": "small", "to": "action", "width": 3}, {"from": "small", "to": "compound", "width": 2}, {"from": "small", "to": "time", "width": 1}, {"from": "action", "to": "compound", "width": 3}, {"from": "action", "to": "time", "width": 2}, {"from": "action", "to": "contribute", "width": 1}, {"from": "compound", "to": "time", "width": 3}, {"from": "compound", "to": "contribute", "width": 2}, {"from": "compound", "to": "significantly", "width": 1}, {"from": "time", "to": "contribute", "width": 3}, {"from": "time", "to": "significantly", "width": 2}, {"from": "time", "to": "personal", "width": 1}, {"from": "contribute", "to": "significantly", "width": 3}, {"from": "contribute", "to": "positively", "width": 3}, {"from": "contribute", "to": "personal", "width": 2}, {"from": "contribute", "to": "growth", "width": 1}, {"from": "contribute", "to": "world", "width": 2}, {"from": "contribute", "to": "embrace", "width": 1}, {"from": "significantly", "to": "personal", "width": 3}, {"from": "significantly", "to": "growth", "width": 2}, {"from": "significantly", "to": "self", "width": 1}, {"from": "encompasse", "to": "mental", "width": 3}, {"from": "encompasse", "to": "emotional", "width": 2}, {"from": "encompasse", "to": "cultivate", "width": 1}, {"from": "positive", "to": "mindset", "width": 3}, {"from": "positive", "to": "manage", "width": 2}, {"from": "positive", "to": "stress", "width": 1}, {"from": "manage", "to": "stress", "width": 3}, {"from": "manage", "to": "nurture", "width": 2}, {"from": "manage", "to": "resilience", "width": 1}, {"from": "stress", "to": "nurture", "width": 3}, {"from": "stress", "to": "resilience", "width": 2}, {"from": "stress", "to": "integral", "width": 1}, {"from": "nurture", "to": "resilience", "width": 3}, {"from": "nurture", "to": "personal", "width": 3}, {"from": "nurture", "to": "integral", "width": 2}, {"from": "nurture", "to": "aspect", "width": 1}, {"from": "nurture", "to": "growth", "width": 2}, {"from": "nurture", "to": "professional", "width": 1}, {"from": "integral", "to": "aspect", "width": 3}, {"from": "integral", "to": "involve", "width": 2}, {"from": "integral", "to": "seek", "width": 1}, {"from": "involve", "to": "seek", "width": 3}, {"from": "involve", "to": "support", "width": 2}, {"from": "involve", "to": "need", "width": 1}, {"from": "support", "to": "need", "width": 3}, {"from": "support", "to": "prioritize", "width": 2}, {"from": "support", "to": "mental", "width": 1}, {"from": "need", "to": "prioritize", "width": 3}, {"from": "need", "to": "mental", "width": 2}, {"from": "need", "to": "health", "width": 1}, {"from": "prioritize", "to": "mental", "width": 3}, {"from": "prioritize", "to": "health", "width": 2}, {"from": "prioritize", "to": "foster", "width": 1}, {"from": "health", "to": "foster", "width": 3}, {"from": "health", "to": "healthy", "width": 2}, {"from": "health", "to": "relationship", "width": 1}, {"from": "realm", "to": "self", "width": 3}, {"from": "realm", "to": "improvement", "width": 2}, {"from": "realm", "to": "translate", "width": 1}, {"from": "translate", "to": "upskille", "width": 3}, {"from": "translate", "to": "embrace", "width": 2}, {"from": "translate", "to": "innovation", "width": 1}, {"from": "upskille", "to": "embrace", "width": 3}, {"from": "upskille", "to": "innovation", "width": 2}, {"from": "upskille", "to": "adapt", "width": 1}, {"from": "innovation", "to": "adapt", "width": 3}, {"from": "innovation", "to": "change", "width": 2}, {"from": "innovation", "to": "landscape", "width": 1}, {"from": "adapt", "to": "change", "width": 3}, {"from": "adapt", "to": "landscape", "width": 2}, {"from": "adapt", "to": "continuous", "width": 1}, {"from": "landscape", "to": "continuous", "width": 3}, {"from": "landscape", "to": "learning", "width": 2}, {"from": "landscape", "to": "adaptability", "width": 1}, {"from": "learning", "to": "adaptability", "width": 3}, {"from": "learning", "to": "crucial", "width": 2}, {"from": "learning", "to": "tool", "width": 1}, {"from": "tool", "to": "thrive", "width": 3}, {"from": "tool", "to": "dynamic", "width": 2}, {"from": "tool", "to": "work", "width": 1}, {"from": "dynamic", "to": "work", "width": 3}, {"from": "dynamic", "to": "environment", "width": 2}, {"from": "dynamic", "to": "conclusion", "width": 1}, {"from": "work", "to": "environment", "width": 3}, {"from": "work", "to": "conclusion", "width": 2}, {"from": "work", "to": "self", "width": 1}, {"from": "environment", "to": "conclusion", "width": 3}, {"from": "environment", "to": "self", "width": 2}, {"from": "environment", "to": "improvement", "width": 1}, {"from": "conclusion", "to": "self", "width": 3}, {"from": "conclusion", "to": "improvement", "width": 2}, {"from": "conclusion", "to": "profound", "width": 1}, {"from": "profound", "to": "journey", "width": 3}, {"from": "profound", "to": "encompass", "width": 2}, {"from": "profound", "to": "dimension", "width": 1}, {"from": "dimension", "to": "life", "width": 3}, {"from": "dimension", "to": "s", "width": 2}, {"from": "dimension", "to": "acknowledge", "width": 1}, {"from": "acknowledge", "to": "potential", "width": 3}, {"from": "acknowledge", "to": "set", "width": 2}, {"from": "acknowledge", "to": "goal", "width": 1}, {"from": "potential", "to": "set", "width": 3}, {"from": "potential", "to": "goal", "width": 2}, {"from": "potential", "to": "learn", "width": 1}, {"from": "continuously", "to": "s", "width": 3}, {"from": "continuously", "to": "testament", "width": 2}, {"from": "continuously", "to": "commitment", "width": 1}, {"from": "testament", "to": "commitment", "width": 3}, {"from": "testament", "to": "good", "width": 2}, {"from": "testament", "to": "version", "width": 1}, {"from": "good", "to": "version", "width": 3}, {"from": "good", "to": "contribute", "width": 2}, {"from": "good", "to": "positively", "width": 1}, {"from": "version", "to": "contribute", "width": 3}, {"from": "version", "to": "positively", "width": 2}, {"from": "version", "to": "world", "width": 1}, {"from": "world", "to": "embrace", "width": 3}, {"from": "world", "to": "beauty", "width": 2}, {"from": "world", "to": "growth", "width": 1}, {"from": "beauty", "to": "growth", "width": 3}, {"from": "beauty", "to": "transformation", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"borderWidth": 0, "color": {"border": "#2B7CE9", "background": "#97C2FC", "highlight": {"border": "#66fa89", "background": "#66fa89"}}, "font": {"size": 45, "face": "verdana"}, "scaling": {"min": 89}, "size": null}, "edges": {"color": {"inherit": false}, "selfReferenceSize": null, "selfReference": {"angle": 0.7853981633974483}, "smooth": {"forceDirection": "none"}}, "interaction": {"hover": true, "hoverConnectedEdges": true, "multiselect": true, "navigationButtons": true}, "physics": {"forceAtlas2Based": {"centralGravity": 0.05, "springLength": 100}, "minVelocity": 0.75, "solver": "forceAtlas2Based"}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
